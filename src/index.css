@@ -12,3 +12,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.festival-image {
+	max-height: 500px;
+	max-width:500px;
+}
