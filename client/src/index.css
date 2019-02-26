@@ -17,3 +17,49 @@ code {
 	max-height: 500px;
 	max-width:500px;
 }
+
+.artist-list {
+    list-style-type: none;
+    padding:0;
+    font-size:1.2rem;
+    width:300px;
+    height:500px;
+    overflow-y: scroll;
+}
+
+.track-list {
+    list-style-type: none;
+    padding:0;
+    font-size:1.2rem;
+    width:600px;
+    height:500px;
+    overflow-y: scroll;
+}
+
+.track-li {
+  margin-bottom:0.2em;
+}
+
+.track-content {
+  width:500px;
+}
+
+.artist-li {
+  margin-bottom:0.2em;
+}
+
+.close {
+  float:right;
+  margin-right:0.2em;
+  cursor:pointer;
+}
+
+.artist-container {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content: center;
+}
+
+.artist-container-element {
+  margin:30px;
+}

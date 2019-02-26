@@ -7,25 +7,47 @@ const client_secret = '1fb9ba7e3e7c495bbaab4f3f8349defd';
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
+
+// create a GET route
+app.get('/image', async (req, res) => {
+  const imageUrl = req.query.imageUrl;
+  const detections = await fetchTextFromImage(imageUrl);
+  res.send(detections);
+});
+
+app.get('/tracks', async (req, res) => {
+  const artistId = req.query.artistId;
+  const limit = req.query.limit;
+  const searcher = new SpotifySearcher(client_id, client_secret);
+  await searcher.authenticate();
+  searcher.getTopTracks(artistId).then((response) => {
+  	const tracks = response.data.tracks;
+  	const limitedTracks = tracks.filter((track, index, arr) => {
+  		return index < limit;
+  	});
+
+  	res.send(limitedTracks);
+  });
+});
+
 // create a GET route
 app.get('/artists', async (req, res) => {
 
   const imageUrl = req.query.imageUrl;
   const detections = await fetchTextFromImage(imageUrl);
-  const rowsOfArtists = detections[0].description.replace(/&/g, 'and').split('\n');
+  const rowsOfArtists = detections[0].description.replace(/&/g, 'and').replace(/\./g,'').split('\n');
   const rowsToParse = [];
-  for(let i=12; i<14;i++) {
+  for(let i=12; i<13;i++) {
   	rowsToParse.push(rowsOfArtists[i]);
   }
   const searcher = new SpotifySearcher(client_id, client_secret);
-  let sleepTime = 100;
+  let sleepTime = 500;
   let rowsCompleted = 0;
     try {
       const validatedArtists = [];
       await searcher.authenticate();
    	const promiseArray = [];
       for(let i=0; i < rowsOfArtists.length; i++) {
-   		await sleep(i*sleepTime);
       	let promise = new Promise(async function(resolve, reject) {
       		try{
       	const lineValidatedArtists = [];
@@ -38,17 +60,27 @@ app.get('/artists', async (req, res) => {
       			artistQuery += ' ' + line[j];
       		}
       		let validatedArtist = null;
-
-      		if(artistQuery.toUpperCase() !== 'THE' && artistQuery.match(/^[a-zA-Z0-9 .]+$/)) {		
-		      	console.log(artistQuery);		    
-	      		await sleep((rowsOfArtists.length - rowsCompleted) * sleepTime);
-			    const response = await searcher.searchArtist(encodeURI(artistQuery));
-		    	validatedArtist = validateSearchResponse(line, startIndex, response);
+      		let response = null;
+      		if(artistQuery.toUpperCase() !== 'THE' && artistQuery.match(/^[a-zA-Z0-9 .-]+$/)) {	
+	      		await sleep(sleepTime);	
+		      	console.log(artistQuery);
+		      	try{
+			    	response = await searcher.searchArtist(encodeURI(artistQuery));
+		    		validatedArtist = validateSearchResponse(line, startIndex, response);
+		    	} catch(e) {
+		    		await sleep(2000)
+			    	response = await searcher.searchArtist(encodeURI(artistQuery));
+		    		validatedArtist = validateSearchResponse(line, startIndex, response);
+		    	}
       		}
 	    	if(validatedArtist !== null) {
 	    		lineValidatedArtists.push(validatedArtist);
 	    		endIndex += validatedArtist.name.split(' ').length;
 	    		startIndex = endIndex;
+	    	} else if(response !== null && response.data.artists.items.length === 0) {
+	    		// move to next word since no results
+	    		startIndex++;
+    			endIndex = startIndex;
 	    	} else {
 	    		endIndex++;
 	    		if(endIndex > line.length) {
@@ -70,7 +102,7 @@ app.get('/artists', async (req, res) => {
       await Promise.all(promiseArray).then(function(allLineValidatedArtists) {
       	for(let i = 0; i < allLineValidatedArtists.length; i++) {
       		for(let j = 0; j < allLineValidatedArtists[i].length; j++) {
-		      	validatedArtists.push(allLineValidatedArtists[i][j].name + "    " + allLineValidatedArtists[i][j].popularity);
+		      	validatedArtists.push(allLineValidatedArtists[i][j]);
       		}
       	}
       })
@@ -95,15 +127,20 @@ app.get('/artist', async (req, res) => {
       await searcher.authenticate();
       const response = await searcher.searchArtist(artist);
       //const validatedArtist = validateSearchResponse(artist, response, startIndex);
-      if(validatedArtist === null) {
+      if(response === null) {
       	res.send("unknown artist")
       } else {
-		  res.send(validatedArtist);
+		  res.send(response.data);
       }
  	} catch (error) {
  	  console.log(error);
 	  res.send(error);
   }
+});
+
+app.get('/test', async (req, res) => {
+
+  res.send("response");
 });
 
 function sleep(ms){
@@ -125,20 +162,25 @@ function validateSearchResponse(query, response) {
 
 function validateSearchResponse(line, startIndex, response) {
 	const items = response.data.artists.items;
-	for(let i = 0; i < items.length; i++) {
-		let artist = items[i].name.split(' ');
+	// longer artists should be checked first since they are less likely to 'accidentally' appear
+	// for example if band name is Red Pants and a there is a band named Red and a band named Red Pants
+	// then we should check Red Pants first since it is more likely that the band referred to is Red Pants
+	// as opposed to one band named Red and another named Pants
+	const itemsOrderedByLength = items.slice().sort(function(a, b) { return b.name.split(' ').length - a.name.split(' ').length});
+	for(let i = 0; i < itemsOrderedByLength.length; i++) {
+		let artist = itemsOrderedByLength[i].name.split(' ');
 		let artistFound = false;
 		if(startIndex + artist.length <= line.length) {
 			artistFound = true;
 			for(let j = 0; j < artist.length; j++) {
-				if(artist[j].toUpperCase() !== line[startIndex + j].toUpperCase()) {
+				if(artist[j].toUpperCase() !== line[startIndex + j].toUpperCase().replace(/\./g,'')) {
 					artistFound = false;
 					break;
 				}
 			}
 		}
 		if(artistFound) {
-			return items[i];
+			return itemsOrderedByLength[i];
 		}
 	}
 
@@ -184,6 +226,22 @@ class SpotifySearcher {
   			headers: {'Authorization': 'Bearer ' + this.accessToken}
 		};	
 
-		return await this.axios.get('https://api.spotify.com/v1/search?q="' + query + '"&type=artist&limit=1' , config);
+		return await this.axios.get('https://api.spotify.com/v1/search?q="' + query + '"&type=artist&limit=3' , config);
+	}
+
+	async searchTrack(query) {
+		var config = {
+  			headers: {'Authorization': 'Bearer ' + this.accessToken}
+		};	
+
+		return await this.axios.get('https://api.spotify.com/v1/search?q="' + query + '"&type=track&limit=10' , config);
+	}
+
+	async getTopTracks(artistId) {
+		var config = {
+  			headers: {'Authorization': 'Bearer ' + this.accessToken}
+		};	
+
+		return await this.axios.get('https://api.spotify.com/v1/artists/' + artistId + '/top-tracks?country=US' , config);
 	}
 }
