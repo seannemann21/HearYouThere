@@ -22,7 +22,10 @@ app.get('/tracks', async (req, res) => {
   await searcher.authenticate();
   searcher.getTopTracks(artistId).then((response) => {
   	const tracks = response.data.tracks;
-  	const limitedTracks = tracks.filter((track, index, arr) => {
+  	const artistTracks = tracks.filter((track, index, arr) => {
+  		return track.artists[0].id === artistId;
+  	});
+  	const limitedTracks = artistTracks.filter((track, index, arr) => {
   		return index < limit;
   	});
 
@@ -30,28 +33,19 @@ app.get('/tracks', async (req, res) => {
   });
 });
 
-// create a GET route
-app.get('/artists', async (req, res) => {
-
+app.get('/text', async (req, res) => {
   const imageUrl = req.query.imageUrl;
   const detections = await fetchTextFromImage(imageUrl);
-  const rowsOfArtists = detections[0].description.replace(/&/g, 'and').replace(/\./g,'').split('\n');
-  const rowsToParse = [];
-  for(let i=12; i<13;i++) {
-  	rowsToParse.push(rowsOfArtists[i]);
-  }
-  const searcher = new SpotifySearcher(client_id, client_secret);
-  let sleepTime = 500;
-  let rowsCompleted = 0;
-    try {
-      const validatedArtists = [];
-      await searcher.authenticate();
-   	const promiseArray = [];
-      for(let i=0; i < rowsOfArtists.length; i++) {
-      	let promise = new Promise(async function(resolve, reject) {
-      		try{
+  console.log(detections);
+  res.send(detections);
+});
+
+app.get('/artists', async (req, res) => {
+	const line = req.query.line.replace(/&/g, 'and').replace(/\./g,'').split(' ');
+	const searcher = new SpotifySearcher(client_id, client_secret);
+	await searcher.authenticate();
+	try{
       	const lineValidatedArtists = [];
-      	const line = rowsOfArtists[i].split(' ');
       	let startIndex = 0;
       	let endIndex = 0;
       	while(startIndex < line.length) {
@@ -62,7 +56,6 @@ app.get('/artists', async (req, res) => {
       		let validatedArtist = null;
       		let response = null;
       		if(artistQuery.toUpperCase() !== 'THE' && artistQuery.match(/^[a-zA-Z0-9 .-]+$/)) {	
-	      		await sleep(sleepTime);	
 		      	console.log(artistQuery);
 		      	try{
 			    	response = await searcher.searchArtist(encodeURI(artistQuery));
@@ -89,30 +82,11 @@ app.get('/artists', async (req, res) => {
 	    		}
 	    	}
       	}
-
-      	rowsCompleted++;
-
-      	resolve(lineValidatedArtists);
+      	res.send(lineValidatedArtists);
       } catch(e) {
       	console.log(e);
       }
-      });
-      promiseArray.push(promise);
-      }
-      await Promise.all(promiseArray).then(function(allLineValidatedArtists) {
-      	for(let i = 0; i < allLineValidatedArtists.length; i++) {
-      		for(let j = 0; j < allLineValidatedArtists[i].length; j++) {
-		      	validatedArtists.push(allLineValidatedArtists[i][j]);
-      		}
-      	}
-      })
 
-      //const artistNames = validatedArtists.map(artist => {return artist.name});
-	  res.send(validatedArtists);
- 	} catch (error) {
- 	  console.log(error);
-	  res.send(error);
-  }
 });
 
 // create a GET route
@@ -126,11 +100,11 @@ app.get('/artist', async (req, res) => {
     try {
       await searcher.authenticate();
       const response = await searcher.searchArtist(artist);
-      //const validatedArtist = validateSearchResponse(artist, response, startIndex);
-      if(response === null) {
+      const validatedArtist = validateSingleArtist(artist, response);
+      if(validatedArtist === null) {
       	res.send("unknown artist")
       } else {
-		  res.send(response.data);
+		  res.send(validatedArtist);
       }
  	} catch (error) {
  	  console.log(error);
@@ -149,10 +123,12 @@ function sleep(ms){
     })
 }
 
-function validateSearchResponse(query, response) {
+function validateSingleArtist(query, response) {
+	console.log(response.data);
 	const items = response.data.artists.items;
 	for(let i = 0; i < items.length; i++) {
-		if(items[i].name.toUpperCase() === query.toUpperCase() && items[i].popularity > 30) {
+		if(items[i].name.toUpperCase() === query.toUpperCase()) {
+			console.log(query.toUpperCase + "    " + items[i].name.toUpperCase())
 			return items[i];
 		}
 	}
@@ -197,6 +173,7 @@ async function fetchTextFromImage(imageUrl) {
 
   // Performs label detection on the image file
   const [result] = await client.documentTextDetection(imageUrl);
+  console.log(result);
   const detections = result.textAnnotations;
   return detections;
 }
