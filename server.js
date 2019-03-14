@@ -11,8 +11,7 @@ app.listen(port, () => console.log(`Listening on port ${port}`));
 // create a GET route
 app.get('/image', async (req, res) => {
   const imageUrl = req.query.imageUrl;
-  const detections = await fetchTextFromImage(imageUrl);
-  res.send(detections);
+  res.send(await fetchTextFromImage(imageUrl));
 });
 
 app.get('/tracks', async (req, res) => {
@@ -35,9 +34,7 @@ app.get('/tracks', async (req, res) => {
 
 app.get('/text', async (req, res) => {
   const imageUrl = req.query.imageUrl;
-  const detections = await fetchTextFromImage(imageUrl);
-  console.log(detections);
-  res.send(detections);
+  res.send(await fetchTextFromImage(imageUrl));
 });
 
 app.get('/artists', async (req, res) => {
@@ -174,8 +171,7 @@ async function fetchTextFromImage(imageUrl) {
   // Performs label detection on the image file
   const [result] = await client.documentTextDetection(imageUrl);
   console.log(result);
-  const detections = result.textAnnotations;
-  return detections;
+  return result;
 }
 
 

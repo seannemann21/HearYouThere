@@ -114,6 +114,26 @@ code {
   height:100%;
 }
 
+.add-btn {
+  width:25%;
+  margin-left: auto;
+}
+
+.add-input {
+  width:70%;
+}
+
+a:not([href]):not([tabindex]) {
+    color: white;
+}
+
+a:not([href]):not([tabindex]):focus,
+a:not([href]):not([tabindex]):hover
+{
+  color:white;
+  cursor:pointer;
+}
+
 .artist-container-element {
   margin:30px;
   max-width: 100%;
