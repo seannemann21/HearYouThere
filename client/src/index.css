@@ -14,12 +14,18 @@ code {
 }
 
 .title-group {
+  margin-left: auto;
+  margin-right:auto;
   text-align: center;
   padding-bottom: 100px;
 }
 
 .title{
-    font-size: 5em;
+    font-size: 4em;
+}
+
+.btn-row {
+  justify-content: center;
 }
 
 .sub-title{
@@ -31,15 +37,14 @@ code {
 }
 
 .main-container {
-  width:fit-content;
   margin-right:auto;
   margin-left:auto;
   margin-top:2em;
 }
 
 .festival-image {
-	max-height: 400px;
-	max-width:300px;
+	max-height: 100%;
+	max-width: 100%;
 }
 
 .btn {
@@ -50,7 +55,7 @@ code {
     list-style-type: none;
     padding:0;
     font-size:1.2rem;
-    width:300px;
+    width: 300px;
     height:400px;
     overflow-y: scroll;
 
@@ -65,9 +70,8 @@ code {
     list-style-type: none;
     padding:0;
     font-size:1.2rem;
-    width:600px;
     max-width: 100%;
-    max-height: 400px;
+    height:400px;
     overflow-y: scroll;
 }
 
@@ -75,9 +79,12 @@ code {
   cursor: pointer;
 }
 
+.track-player{
+  min-width: 300px;
+}
+
 .btn-container {
   text-align: center;
-  width:500px;
   margin-left: auto;
   margin-right: auto;
 }
@@ -94,7 +101,13 @@ code {
 .artist-li {
   margin-right: 0.5em;
   margin-bottom: 0.5em;
+
   background: whitesmoke;
+}
+
+.artist-li-content {
+  max-width: 90% !important;
+  display: inline-block !important;
 }
 
 .close {
@@ -120,7 +133,7 @@ code {
 }
 
 .add-input {
-  width:70%;
+  width:70% !important;
 }
 
 a:not([href]):not([tabindex]) {
@@ -135,8 +148,12 @@ a:not([href]):not([tabindex]):hover
 }
 
 .artist-container-element {
-  margin:30px;
+  margin:20px;
   max-width: 100%;
+}
+
+.no-content-text {
+  overflow-wrap:break-word;
 }
 
 .image-input {
@@ -174,12 +191,6 @@ a:not([href]):not([tabindex]):hover
   color: white;  
 }
 
-@media only screen and (max-width: 750px) {
-  body {
-    margin-right: auto;
-    margin-left: auto;
-  }
-}
 
 @media only screen and (max-width: 1100px) {
   body {
@@ -187,10 +198,21 @@ a:not([href]):not([tabindex]):hover
   }
 }
 
-@media only screen and (min-width: 750px) {
-  .main-container {
-    /*width:760px;*/
-    height:80%;
-    /*box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;*/
+
+@media only screen and (max-width: 600px) {
+    .footer {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background-color: #495057;
+  color: white;
+  text-align: center;
+  height:4rem !important;
+  padding-top: 0.5rem;
+  }
+
+  body {
+    padding-bottom: 4rem;
   }
 }

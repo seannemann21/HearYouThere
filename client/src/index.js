@@ -3,10 +3,14 @@ import ReactDOM from 'react-dom';
 import './index.css';
 const clientId = '0772a5231e724f94874272b38f9a6e21';
 
+const state = {
+    ARTIST_VIEW: 'artist',
+    PLAYLIST_VIEW: 'playlist',
+    TITLE_VIEW: 'title'
+}
+
 class SpotifyPlaylistBuilder {
 	constructor(clientId, accessToken) {
-		this.axios = require('axios');
-		this.querystring = require('querystring');
 		this.clientId = clientId;
 		this.accessToken = accessToken;
 		this.userId = null;
@@ -25,7 +29,14 @@ class SpotifyPlaylistBuilder {
 	}
 
 	async exportPlaylist(playlistName, tracks) {
-		const playlist = await this.createPlaylist(playlistName);
+		let playlist = null;
+		try {
+			playlist = await this.createPlaylist(playlistName);
+		} catch(error) {
+			alert("Error Occurred During Playlist Creation. Spotify token probably expired. Sign into Spotify again and retry.");
+			this.setState({playlistBuilder: null})
+			return;
+		}
 		// max of 100 per request
 		let necessaryRequests = Math.floor(tracks.length/100);
 		if(tracks.length % 100 !== 0) {
@@ -45,8 +56,8 @@ class SpotifyPlaylistBuilder {
 		Promise.all(addTracksRequests).then(() =>
 						alert("Playlist Created and Tracks Added")
 		      		).catch(function(err) {
-						alert("Error Occurred During Playlsit Creation")
-					});	
+						alert("Error Occurred During Playlist Creation")
+		      		});	
 	}
 
 	async addTracksToPlaylist(tracks, playlistId) {
@@ -80,7 +91,7 @@ class SpotifyPlaylistBuilder {
 	            "Authorization": 'Bearer ' + this.accessToken
 	        },
 	        body: JSON.stringify(data), // body data type must match "Content-Type" header
-    	}).then((response) => response.json())
+    	}).then((response) => response.json());
     	
     	return playlist;
 	}
@@ -101,12 +112,12 @@ class FestivalImage extends React.Component{
 
 	render() {
 		return (
-			<div className="artist-container-element">
-			{this.state.validUrl ?
-				<img className="festival-image" src={this.props.imageUrl} onError={() => this.error()}/>
-				: <h4>Sorry, image couldn't be found.<br/>You could try:<br/>https://pbs.twimg.com/media/Dy16kT4W0AAJ8EW.jpg</h4>
+			<>
+			{ this.state.validUrl ?
+				<div className="col col-md-5 artist-container-element"><img className="festival-image" src={this.props.imageUrl} onError={() => this.error()}/></div>
+				: <div className="col artist-container-element"><h4 className="no-content-text">Sorry, image couldn't be found.<br/>You could try:<br/>https://pbs.twimg.com/media/Dy16kT4W0AAJ8EW.jpg</h4></div>
 			}
-			</div>
+			</>
 		)
 	}
 }
@@ -147,7 +158,7 @@ class RemovableList extends React.Component{
 	renderItems() {
 		const rows = [];
 		const listItems = this.props.items.map((item) =>
-			<li onClick={() => this.props.itemClick(item)} key={item.key} className={this.props.itemClass}><span className={this.props.contentClass}>{item.value}</span><span className="close" onClick={(e) => this.props.remove(e, item.key)}>x</span></li>					
+			<li onClick={() => this.props.itemClick(item)} key={item.key} className={this.props.itemClass}><span className={this.props.contentClass + " artist-li-content"}>{item.value}</span><span className="close" onClick={(e) => this.props.remove(e, item.key)}>x</span></li>					
 		);
 
 		return listItems;
@@ -182,18 +193,72 @@ function getHashFragmentValue(key) {
 	return null;
 }
 
+class ButtonContainer extends React.Component {
+
+	render() {
+		return (
+			<div className="btn-container container-fluid">
+					<div className="row">
+						<input placeholder={this.props.inputPlaceholder} className="image-input col-10 offset-1 col-md-8 offset-md-2" type="text" value={this.props.inputText} onChange={this.props.inputChange}/>
+					</div>
+					<div className="row btn-row">
+						{this.props.viewState === state.TITLE_VIEW || this.props.viewState === state.ARTIST_VIEW ?
+							<button className="btn btn-primary" disabled={this.props.requestPending || this.props.artists.length === 0} onClick={() => this.props.generatePlaylist()}>Generate Playlist</button>
+							: ''
+						}
+						{this.props.viewState === state.PLAYLIST_VIEW ?
+							<>
+								<button disabled={this.props.requestPending} className="btn btn-primary" onClick={() => this.props.clearPlaylist()}>Clear Playlist</button>
+								<button disabled={!this.props.signedIntoSpotify || this.props.requestPending || this.props.inputText === ""} className="btn btn-primary" onClick={() => this.props.exportPlaylist()}>Export Playlist</button>
+							</>
+							: ''
+						}
+						{ !this.props.signedIntoSpotify ?
+							<a className="btn btn-primary" onClick={() => this.props.signIntoSpotify()}>Spotify Login</a>
+						  : ''
+						}
+						{this.props.invalidUrl ? <div>invalidUrl</div> : ""}
+					</div>
+			</div>
+		)
+	}
+
+}
+
+class MainTitle extends React.Component {
+	render() {
+		return (
+			<div className="title-group">
+				<div className = "title col">
+					Hear You There
+				</div>
+				<div className = "sub-title col-10 offset-1">
+					Enter the URL of an image of a music lineup to generate a playlist
+				</div>
+			</div>
+		);
+	}
+}
+
 class MainWidget extends React.Component{
 
 	constructor(props) {
 		super(props);
 
 		const state = sessionStorage.getItem('state');
+		
 		if(state) {
-			this.state = JSON.parse(state);
-			setTimeout(() => {
-				this.setState({playlistBuilder: null});
-				alert("Spotify login has expired. You must sign in again.");
-			},60*60*1000)
+			try{
+				this.state = JSON.parse(state);
+			} catch(err) {
+				this.state = {imageUrl:"",
+						  artists:[],
+						  tracks:[],
+						  requestPending: false,
+						  playlistTitle:"",
+						  invalidUrl: false
+				};
+			}
 		} else {
 			this.state = {imageUrl:"",
 						  artists:[],
@@ -208,11 +273,14 @@ class MainWidget extends React.Component{
 		this.updateSelectedTrack = this.updateSelectedTrack.bind(this);
 		this.updateImage = this.updateImage.bind(this);
 		this.updatePlaylistTitle = this.updatePlaylistTitle.bind(this);
-		this.axios = require('axios');
 
 		const accessToken = getHashFragmentValue('access_token');
 		if(accessToken !== null) {
 			this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
+			setTimeout(() => {
+				this.setState({playlistBuilder: null});
+				alert("Spotify login has expired. You must sign in again.");
+			},60*60*1000)
 		}
 	}
 
@@ -225,31 +293,22 @@ class MainWidget extends React.Component{
 		const imageUrl = event.target.value;
 		this.setState({imageUrl: imageUrl});
 
-		if(imageUrl != "") {
-			if(this.validateUrl(imageUrl)) {
+		if(this.validateUrl(imageUrl)) {
 				this.setState({
 				   artists: [],
 				   requestPending: true,
-				   playlistTitle: "",
 				   invalidUrl: false
-			   });
-				console.log("break1");
+			    });
+
 				const response = await fetch('text?imageUrl=' + imageUrl).then((response) => response.json());
-				console.log("break1");
 
 				if(!response.error && response.textAnnotations) {
-					
-				this.setState({
-					   artists: [],
-					   tracks: [],
-					   requestPending: true,
-					   playlistTitle: "",
-					   invalidUrl: false});
+
 					const rowsOfArtists = response.textAnnotations[0].description.split('\n');
 					const artistRequests = [];
 					for(let i = 0; i < rowsOfArtists.length; i++) {
 						const request = fetch('artists?line=' + rowsOfArtists[i]).then((response) => response.json()).then((data) => {
-							const artists = this.state.artists;
+							const artists = this.state.artists.slice();
 							for(let j = 0; j < data.length; j++) {
 								const artist = {
 									artistData: data[j],
@@ -272,14 +331,12 @@ class MainWidget extends React.Component{
 					await Promise.all(artistRequests).then(() =>
 						this.setState({
 								requestPending: false,
-					   			playlistTitle: "",
 					   			invalidUrl: false
 							})
 							
-		      		).catch(function(err) {
+		      		).catch((err) => {
 								this.setState({
 									requestPending: false,
-						   			playlistTitle: "",
 						   			invalidUrl: false
 								});
 							  console.log(err.message);
@@ -287,19 +344,15 @@ class MainWidget extends React.Component{
 				} else {
 					alert("Unable to process image. Try another one")
 					this.setState({
-								requestPending: false,
-					   			playlistTitle: "",
-					   			invalidUrl: false
-							})
+						requestPending: false,
+			   			invalidUrl: false
+					})
 				}
-			} else {
-				console.log("break");
-				this.setState({
-								requestPending: false,
-					   			playlistTitle: "",
-					   			invalidUrl: true
-							})
-			}
+		} else {
+			this.setState({
+				requestPending: false,
+	   			invalidUrl: true
+			})
 		}
 	}
 
@@ -308,27 +361,23 @@ class MainWidget extends React.Component{
 	}
 
 	removeArtist(e, artistId) {
-		const artists = this.state.artists;
+		const artists = this.state.artists.slice();
 		const updatedArtists = artists.filter(function(artist, index, arr){
     		return artist.artistData.id !== artistId;
 		});
 		this.setState({
-			imageUrl: this.state.imageUrl,
-			artists: updatedArtists,
-			tracks: this.state.tracks,
-			requestPending: this.state.requestPending
+			artists: updatedArtists
 		})
 	}
 
 	removeTrack(e, trackId) {
+		// if click bubbles then song would be selected in player
 		e.stopPropagation();
-		const tracks = this.state.tracks;
+		const tracks = this.state.tracks.slice();
 		const updatedTracks = tracks.filter(function(track, index, arr){
     		return track.trackData.id !== trackId;
 		});
 		this.setState({
-			imageUrl: this.state.imageUrl,
-			artists: this.state.artists,
 			tracks: updatedTracks
 		})
 	}
@@ -338,12 +387,13 @@ class MainWidget extends React.Component{
 
 		this.setState({
 			   tracks: [],
+			   playlistTitle: "",
 			   requestPending: true
 			   });
 		const trackRequests = [];
 		for(let i = 0; i < artists.length; i++) {
 			const trackRequest = fetch('tracks?artistId=' + artists[i].artistData.id + '&limit=5').then((response) => response.json()).then((data) => {
-				const tracks = this.state.tracks;
+				const tracks = this.state.tracks.slice();
 				
 				for(let j = 0; j < data.length; j++) {
 					const track = {
@@ -363,7 +413,6 @@ class MainWidget extends React.Component{
 		}
 
 		await Promise.all(trackRequests).then(() =>
-
 			this.setState({
 					requestPending: false
 				})
@@ -413,7 +462,7 @@ class MainWidget extends React.Component{
 		let artistAdded = false;
 		const validatedArtist = await fetch('artist?artist=' + artist).then((response) => response.json()).catch((error) => alert("Artist couldn't be found."))
 		if(validatedArtist){
-			const artists = this.state.artists;
+			const artists = this.state.artists.slice();
 			const artist = {artistData: validatedArtist,
 							row: -1};
 			artists.push(artist);
@@ -425,84 +474,81 @@ class MainWidget extends React.Component{
 		return artistAdded;
 	}
 
-	displayView() {
-		const rows = [];
-		if(this.state.imageUrl == "") {
-			rows.push(
-			<div>
-				<div className="title-group">
-					<div className = "title">
-						Hear You There
-					</div>
-					<div className = "sub-title">
-						Enter the URL of an image of a music lineup to generate a playlist
-					</div>
+	renderMainTitleView() {
+		return (
+			<div className="container-fluid">
+				<div className="row">
+					<MainTitle/>
 				</div>
-				<div className="btn-container">
-					<div>
-						<input placeholder="Image URL" className="image-input" disabled={this.state.requestPending} type="text" value={this.state.imageUrl} onChange={this.updateImage}/>
-					</div>
-					<button className="btn btn-primary" disabled={this.state.requestPending || this.state.artists.length === 0} onClick={() => this.generatePlaylist()}>Generate Playlist</button>
-					{ !this.playlistBuilder ?
-						<a className="btn btn-primary" onClick={() => this.signIntoSpotify()}>Spotify Login</a>
-					  : ''
-					}
+				<div className="row">
+					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={state.TITLE_VIEW} requestPending={this.state.requestPending}
+					artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+					clearPlaylist={() => this.clearPlaylist}/>
 				</div>
 			</div>
 			);
+	}
+
+	renderArtistView() {
+		return (
+			<div className="container-fluid">
+				<div className="artist-container row">
+						<FestivalImage imageUrl={this.state.imageUrl}/>
+						<div className="col col-md-6">
+						{this.state.artists.length > 0 ? (
+							<RemovableList placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={this.removeArtist}/>
+						) : ('')}
+					</div>
+				</div>
+				<div className="row">
+					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={state.ARTIST_VIEW} requestPending={this.state.requestPending}
+						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+						clearPlaylist={() => this.clearPlaylist}/>
+				</div>
+			</div>
+			);
+	}
+
+	renderPlaylistView() {
+		return (
+			<>
+				<div className ="artist-container row">
+					<div className="col col-md-8">
+						<RemovableList itemClick={this.updateSelectedTrack} itemClass="shadow-sm artist-li clickable" contentClass="track-content" listClass="track-list" items={this.state.tracks.map(function(track){return {key: track.trackData.id, value: track.trackData.artists[0].name + ": " + track.trackData.name}})} remove={this.removeTrack}/>
+					</div>
+
+					{this.state.selectedTrack ? 
+						<div className="col col-md-3 track-player">
+						<iframe className="artist-container-element" src={this.getFormattedSelectedTrack()} width="300" height="400" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+						</div>
+						: ''}
+				</div>
+				<div className="row">
+					<ButtonContainer inputPlaceholder="Playlist Name" inputText={this.state.playlistTitle} inputChange={this.updatePlaylistTitle} viewState={state.PLAYLIST_VIEW} requestPending={this.state.requestPending}
+						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+						clearPlaylist={() => this.clearPlaylist()}/>
+				</div>
+			</>
+			);
+	}
+
+	renderView() {
+		let view;
+		if(this.state.imageUrl == "") {
+			view = this.renderMainTitleView();
 		} else if(this.state.tracks.length == 0) {
-			rows.push(
-					<div>
-						<div className="artist-container">
-							<FestivalImage imageUrl={this.state.imageUrl}/>
-							{this.state.artists.length > 0 ? (
-								<RemovableList placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={this.removeArtist}/>
-							) : ('')}
-						</div>
-						<div className="btn-container">
-							<div>
-								<input placeholder="Image URL" className="image-input" disabled={this.state.requestPending} type="text" value={this.state.imageUrl} onChange={this.updateImage}/>
-								{this.state.invalidUrl ? <div>invalidUrl</div> : ""}
-							</div>
-							<button className="btn btn-primary" disabled={this.state.requestPending || this.state.artists.length === 0} onClick={() => this.generatePlaylist()}>Generate Playlist</button>
-							{ !this.playlistBuilder ?
-								<a className="btn btn-primary" onClick={() => this.signIntoSpotify()}>Spotify Login</a>
-							  : ''
-							}
-						</div>
-					</div>
-					);
+			view = this.renderArtistView();
 		} else {
-			rows.push(
-					<div>
-						<div className ="artist-container">
-							<RemovableList itemClick={this.updateSelectedTrack} itemClass="shadow-sm artist-li clickable" contentClass="track-content" listClass="track-list" items={this.state.tracks.map(function(track){return {key: track.trackData.id, value: track.trackData.artists[0].name + ": " + track.trackData.name}})} remove={this.removeTrack}/>
-							{this.state.selectedTrack ? 
-								<iframe className="artist-container-element" src={this.getFormattedSelectedTrack()} width="300" height="400" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
-								: ''}
-						</div>
-						<div className="btn-container">
-							<div>
-								<input placeholder="Playlist Title" className="image-input" type="text" value={this.state.playlistTitle} onChange={this.updatePlaylistTitle}/>
-							</div>
-							<button disabled={this.state.requestPending || this.state.playlistTitle === ""} className="btn btn-primary" onClick={() => this.exportPlaylist()}>Export Playlist</button>
-							<button disabled={this.state.requestPending} className="btn btn-primary" onClick={() => this.clearPlaylist()}>Clear Playlist</button>
-							{ !this.playlistBuilder ?
-								<a className="btn btn-primary" onClick={() => this.signIntoSpotify()}>Spotify Login</a>
-							  : ''
-							}
-						</div>
-					</div>
-					);
+			view = this.renderPlaylistView();
 		}
 
-		return rows;
+		return view;
 	}
 
 	render() {
 		return (
 			<div>
-				{this.displayView()}
+				{this.renderView()}
 			</div>
 		)
 	}
@@ -522,7 +568,7 @@ class MainPage extends React.Component{
 	render() {
 		return(
 		<div>
-			<div className="main-container">
+			<div className="main-container col col-lg-8 offset-lg-2">
 				<MainWidget/>
 			</div>
 			<Footer/>
