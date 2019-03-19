@@ -7,25 +7,24 @@ export class SpotifyPlaylistBuilder {
 
 	async setUserId() {
 
-	const userData = await fetch('https://api.spotify.com/v1/me', {
-		method: "GET",
-		headers: {
-	            "Authorization": 'Bearer ' + this.accessToken
-	        }
-	}).then((response) => response.json());
+		const userData = await fetch('https://api.spotify.com/v1/me', {
+			method: "GET",
+			headers: {
+		            "Authorization": 'Bearer ' + this.accessToken
+		        }
+		}).then((response) => response.json());
 
+		if(userData.error && userData.error.status === 401) {
+			throw "expired token";
+		}
 		this.userId = userData.id;
 	}
 
 	async exportPlaylist(playlistName, tracks) {
 		let playlist = null;
-		try {
-			playlist = await this.createPlaylist(playlistName);
-		} catch(error) {
-			alert("Error Occurred During Playlist Creation. Spotify token probably expired. Sign into Spotify again and retry.");
-			this.setState({playlistBuilder: null})
-			return;
-		}
+		
+		playlist = await this.createPlaylist(playlistName);
+		
 		// max of 100 per request
 		let necessaryRequests = Math.floor(tracks.length/100);
 		if(tracks.length % 100 !== 0) {
@@ -65,7 +64,7 @@ export class SpotifyPlaylistBuilder {
 	}
 
 	async createPlaylist(playlistName) {
-		if(this.userId === null) {
+		if(!this.userId) {
 			await this.setUserId();
 		}
 

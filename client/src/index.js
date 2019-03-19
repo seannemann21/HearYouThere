@@ -39,8 +39,6 @@ class MainWidget extends React.Component{
 		} else {
 			this.state = this.getFreshState();
 		}
-		this.removeArtist = this.removeArtist.bind(this);
-		this.removeTrack = this.removeTrack.bind(this);
 		this.updateSelectedTrack = this.updateSelectedTrack.bind(this);
 		this.updateImage = this.updateImage.bind(this);
 		this.updatePlaylistTitle = this.updatePlaylistTitle.bind(this);
@@ -48,21 +46,20 @@ class MainWidget extends React.Component{
 		const accessToken = getHashFragmentValue('access_token');
 		if(accessToken !== null) {
 			this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
-			setTimeout(() => {
-				this.setState({playlistBuilder: null});
-				alert("Spotify login has expired. You must sign in again.");
-			},60*60*1000)
+			this.state.signedIntoSpotify = true;
 		}
 	}
 
 	getFreshState() {
+		const signedIntoSpotify = this.state && this.state.signedIntoSpotify ? true : false;
 		return {
 				  imageUrl:"",
 				  artists:[],
 				  tracks:[],
 				  requestPending: false,
 				  playlistTitle:"",
-				  invalidUrl: false
+				  invalidUrl: false,
+				  signedIntoSpotify: signedIntoSpotify
 				};
 	}
 
@@ -88,10 +85,7 @@ class MainWidget extends React.Component{
 					this.populateArtists(response);					
 				} else {
 					alert("Unable to process image. Try another one")
-					this.setState({
-						requestPending: false,
-			   			invalidUrl: false
-					})
+					this.setValidResponseReceivedState();
 				}
 		} else {
 			this.setState({
@@ -106,39 +100,43 @@ class MainWidget extends React.Component{
 		const artistRequests = [];
 		for(let i = 0; i < rowsOfArtists.length; i++) {
 			const request = fetch('artists?line=' + rowsOfArtists[i]).then((response) => response.json()).then((data) => {
-				const artists = this.state.artists.slice();
-				for(let j = 0; j < data.length; j++) {
-					const artist = {
-						artistData: data[j],
-						row: i
-					}
-					// avoid duplicates
-					if(artists.filter(a => a.artistData.id === artist.artistData.id).length === 0) {
-						artists.push(artist);
-					}
-				}
-				artists.sort((a, b) => {
-					return a.row - b.row;
-				});
-				this.setState({
-					artists: artists
-				});
+				this.addParsedArtistsToArtistList(data, i);
 			});
 			artistRequests.push(request);
 		}
 		await Promise.all(artistRequests).then(() =>
-			this.setState({
-					requestPending: false,
-		   			invalidUrl: false
-				})
-				
+			this.setValidResponseReceivedState() 
   		).catch((err) => {
-					this.setState({
-						requestPending: false,
-			   			invalidUrl: false
-					});
-				  console.log(err.message);
+  			console.log(err);
+			this.setValidResponseReceivedState();
 		});	
+	}
+
+	addParsedArtistsToArtistList(artistsOnRow, row) {
+		const artists = this.state.artists.slice();
+		for(let j = 0; j < artistsOnRow.length; j++) {
+			const artist = {
+				artistData: artistsOnRow[j],
+				row: row
+			}
+			// avoid duplicates
+			if(artists.filter(a => a.artistData.id === artist.artistData.id).length === 0) {
+				artists.push(artist);
+			}
+		}
+		artists.sort((a, b) => {
+			return a.row - b.row;
+		});
+		this.setState({
+			artists: artists
+		});
+	}
+
+	setValidResponseReceivedState() {
+		this.setState({
+			requestPending: false,
+   			invalidUrl: false
+		});
 	}
 
 	validateUrl(value) {
@@ -205,8 +203,13 @@ class MainWidget extends React.Component{
 	}
 
 	async exportPlaylist() {
-		if(this.playlistBuilder) {
-			this.playlistBuilder.exportPlaylist(this.state.playlistTitle, this.state.tracks.map((track) => track.trackData))
+		if(this.state.signedIntoSpotify) {
+			try {
+				await this.playlistBuilder.exportPlaylist(this.state.playlistTitle, this.state.tracks.map((track) => track.trackData));
+			} catch(err) {
+				alert("Your token may have expired. Try signing into Spotify again");
+				this.setState({signedIntoSpotify: false});
+			}
 		} else {
 			alert("You must login to Spotify to export playlist.")
 		}
@@ -218,6 +221,7 @@ class MainWidget extends React.Component{
 
 	signIntoSpotify() {
 		sessionStorage.setItem('state', JSON.stringify(this.state))
+		const x = sessionStorage.getItem('state');
 		window.location.assign('https://accounts.spotify.com/authorize?client_id=0772a5231e724f94874272b38f9a6e21&redirect_uri=https://5ac9fff3.ngrok.io/&scope=user-read-private%20playlist-modify-public%20user-read-email&response_type=token');
 	}
 
@@ -260,7 +264,7 @@ class MainWidget extends React.Component{
 				</div>
 				<div className="row">
 					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={State.TITLE_VIEW} requestPending={this.state.requestPending}
-					artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+					artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={() => this.signIntoSpotify()} signedIntoSpotify={this.state.signedIntoSpotify}
 					clearPlaylist={() => this.clearPlaylist}/>
 				</div>
 			</div>
@@ -274,13 +278,13 @@ class MainWidget extends React.Component{
 						<FestivalImage imageUrl={this.state.imageUrl}/>
 						<div className="col col-md-6">
 						{this.state.artists.length > 0 ? (
-							<EditableList placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={this.removeArtist}/>
+							<EditableList placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={(e, artistId) => this.removeArtist(e, artistId)}/>
 						) : ('')}
 					</div>
 				</div>
 				<div className="row">
 					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={State.ARTIST_VIEW} requestPending={this.state.requestPending}
-						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={() => this.signIntoSpotify()} signedIntoSpotify={this.state.signedIntoSpotify}
 						clearPlaylist={() => this.clearPlaylist}/>
 				</div>
 			</div>
@@ -292,7 +296,7 @@ class MainWidget extends React.Component{
 			<>
 				<div className ="artist-container row">
 					<div className="col col-md-8">
-						<EditableList itemClick={this.updateSelectedTrack} itemClass="shadow-sm artist-li clickable" contentClass="track-content" listClass="track-list" items={this.state.tracks.map(function(track){return {key: track.trackData.id, value: track.trackData.artists[0].name + ": " + track.trackData.name}})} remove={this.removeTrack}/>
+						<EditableList itemClick={this.updateSelectedTrack} itemClass="shadow-sm artist-li clickable" contentClass="track-content" listClass="track-list" items={this.state.tracks.map(function(track){return {key: track.trackData.id, value: track.trackData.artists[0].name + ": " + track.trackData.name}})} remove={(e, trackId) => this.removeTrack(e, trackId)}/>
 					</div>
 
 					{this.state.selectedTrack ? 
@@ -303,7 +307,7 @@ class MainWidget extends React.Component{
 				</div>
 				<div className="row">
 					<ButtonContainer inputPlaceholder="Playlist Name" inputText={this.state.playlistTitle} inputChange={this.updatePlaylistTitle} viewState={State.PLAYLIST_VIEW} requestPending={this.state.requestPending}
-						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={this.signIntoSpotify} signedIntoSpotify={this.playlistBuilder ? true : false}
+						artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={() => this.signIntoSpotify()} signedIntoSpotify={this.state.signedIntoSpotify}
 						clearPlaylist={() => this.clearPlaylist()}/>
 				</div>
 			</>
