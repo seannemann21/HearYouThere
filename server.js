@@ -1,12 +1,30 @@
 const express = require('express');
 const app = express();
 const port = process.env.PORT || 5000;
+const path = require('path');
 const client_id = '0772a5231e724f94874272b38f9a6e21';
 const client_secret = '1fb9ba7e3e7c495bbaab4f3f8349defd';
 
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
+
+// Thank you Ashish Nandan Singh for lines 12-25
+// https://medium.freecodecamp.org/how-to-deploy-a-react-app-with-an-express-server-on-heroku-32244fe5a250
+app.use(express.static(path.join(__dirname, 'client/build')));
+
+//production mode
+if(process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'client/build')));
+  //
+  app.get('*', (req, res) => {
+    res.sendfile(path.join(__dirname = 'client/build/index.html'));
+  })
+}
+//build mode
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname+'/client/public/index.html'));
+})
 
 // create a GET route
 app.get('/image', async (req, res) => {
