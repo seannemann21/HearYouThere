@@ -8,8 +8,9 @@
     "client-install": "npm install --prefix client",
     "start": "node server.js",
     "client": "npm start --prefix client",
-    "dev": "concurrently \"npm run start\" \"npm run client\"",
-    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client"
+    "dev": "npm run preinstall && concurrently \"npm run start\" \"npm run client\"",
+    "preinstall" : "node preinstall.js",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm install --prefix client && npm run build --prefix client && npm run preinstall"
   },
   "repository": {
     "type": "git",
