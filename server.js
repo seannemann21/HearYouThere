@@ -3,7 +3,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const path = require('path');
 const client_id = '0772a5231e724f94874272b38f9a6e21';
-const client_secret = '1fb9ba7e3e7c495bbaab4f3f8349defd';
+const client_secret = process.env.CLIENT_SECRET;
 
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
@@ -26,6 +26,12 @@ if(process.env.NODE_ENV === 'production') {
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname+'/client/public/index.html'));
 })
+
+// create a GET route
+app.get('/uri', async (req, res) => {
+  const data = {uri:process.env.REDIRECT_URI}
+  res.send(data);
+});
 
 // create a GET route
 app.get('/image', async (req, res) => {

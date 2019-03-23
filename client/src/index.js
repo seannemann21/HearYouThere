@@ -48,6 +48,8 @@ class MainWidget extends React.Component{
 			this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
 			this.state.signedIntoSpotify = true;
 		}
+
+		fetch('/uri').then(response => response.json()).then(data => this.uri = data.uri);
 	}
 
 	getFreshState() {
@@ -222,7 +224,7 @@ class MainWidget extends React.Component{
 	signIntoSpotify() {
 		sessionStorage.setItem('state', JSON.stringify(this.state))
 		const x = sessionStorage.getItem('state');
-		window.location.assign('https://accounts.spotify.com/authorize?client_id=0772a5231e724f94874272b38f9a6e21&redirect_uri=https://5ac9fff3.ngrok.io/&scope=user-read-private%20playlist-modify-public%20user-read-email&response_type=token');
+		window.location.assign('https://accounts.spotify.com/authorize?client_id=0772a5231e724f94874272b38f9a6e21&redirect_uri=' + this.uri + '&scope=user-read-private%20playlist-modify-public%20user-read-email&response_type=token');
 	}
 
 	updateSelectedTrack(track) {
