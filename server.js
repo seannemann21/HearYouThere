@@ -37,12 +37,7 @@ app.get('/clientId', async (req, res) => {
   res.send(data);
 });
 
-// create a GET route
-app.get('/image', async (req, res) => {
-  const imageUrl = req.query.imageUrl;
-  res.send(await fetchTextFromImage(imageUrl));
-});
-
+// returns the top tracks from an artist
 app.get('/tracks', async (req, res) => {
   const artistId = req.query.artistId;
   const limit = req.query.limit;
@@ -61,38 +56,52 @@ app.get('/tracks', async (req, res) => {
   });
 });
 
+// returns text from image using Googles Cloud Vision API
 app.get('/text', async (req, res) => {
   const imageUrl = req.query.imageUrl;
   res.send(await fetchTextFromImage(imageUrl));
 });
 
+// takes a string of artists (e.g. Childish Gambino Rage Against the Machine) and parses the artists from it using Spotify API
+// this method needs to be cleaned up in the future
 app.get('/artists', async (req, res) => {
+	// swap '&' for 'and' and remove '.' charactes then split on spaces to get query terms
 	const line = req.query.line.replace(/&/g, 'and').replace(/\./g,'').split(' ');
 	const searcher = new SpotifySearcher(client_id, client_secret);
 	await searcher.authenticate();
 	try{
       	const lineValidatedArtists = [];
+      	// start index and end index represent beginning and end of next Spotify query
       	let startIndex = 0;
       	let endIndex = 0;
       	while(startIndex < line.length) {
       		let artistQuery = line[startIndex];
+      		// construct next query
       		for(let j = startIndex + 1; j <= endIndex && j < line.length; j++) {
       			artistQuery += ' ' + line[j];
       		}
       		let validatedArtist = null;
       		let response = null;
+      		// don't query if query is only the word 'the'
+      		// query can not contain any special characters either
       		if(artistQuery.toUpperCase() !== 'THE' && artistQuery.match(/^[a-zA-Z0-9 .-]+$/)) {	
 		      	console.log(artistQuery);
 		      	try{
+		      		// query Spotify for results
 			    	response = await searcher.searchArtist(encodeURI(artistQuery));
+		    		// Check if the query results in an artist match
 		    		validatedArtist = validateSearchResponse(line, startIndex, response);
 		    	} catch(e) {
+		    		// if query fails due to too many API hits, then sleep 2 seconds and try again
+		    		// in the future will clean this up to try more than twice, but it's fine for now since
+		    		// missed artists can be added manually throught the app
 		    		await sleep(2000)
 			    	response = await searcher.searchArtist(encodeURI(artistQuery));
 		    		validatedArtist = validateSearchResponse(line, startIndex, response);
 		    	}
       		}
 	    	if(validatedArtist !== null) {
+	    		// if artist found then add artist to validated artists and move to next query
 	    		lineValidatedArtists.push(validatedArtist);
 	    		endIndex += validatedArtist.name.split(' ').length;
 	    		startIndex = endIndex;
@@ -101,13 +110,16 @@ app.get('/artists', async (req, res) => {
 	    		startIndex++;
     			endIndex = startIndex;
 	    	} else {
+	    		// if results are found but no match, then increase terms in search query and try again
 	    		endIndex++;
 	    		if(endIndex > line.length) {
+	    			// decrease terms in query if the end index is at the end of the line
 	    			startIndex++;
 	    			endIndex = startIndex;
 	    		}
 	    	}
       	}
+      	// return results
       	res.send(lineValidatedArtists);
       } catch(e) {
       	console.log(e);
@@ -115,7 +127,7 @@ app.get('/artists', async (req, res) => {
 
 });
 
-// create a GET route
+// route to see if an artist is a valid artist according to Spotify
 app.get('/artist', async (req, res) => {
 
   const artist = req.query.artist;
@@ -162,6 +174,7 @@ function validateSingleArtist(query, response) {
 	return null;
 }
 
+// checks if a response from a Sportify search contains an artist
 function validateSearchResponse(line, startIndex, response) {
 	const items = response.data.artists.items;
 	// longer artists should be checked first since they are less likely to 'accidentally' appear
@@ -190,6 +203,7 @@ function validateSearchResponse(line, startIndex, response) {
 }
 
 // taken from Google documentation
+// uses Google Cloud Vision to parse text from image
 async function fetchTextFromImage(imageUrl) {
   // Imports the Google Cloud client library
   const vision = require('@google-cloud/vision');
