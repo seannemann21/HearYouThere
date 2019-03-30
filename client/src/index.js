@@ -8,7 +8,6 @@ import { EditableList } from './EditableList.js';
 import { ButtonContainer } from './ButtonContainer.js';
 import { MainTitle } from './MainTitle.js';
 import { State } from './State.js';
-const clientId = '0772a5231e724f94874272b38f9a6e21';
 
 function getHashFragmentValue(key) {
 	var hash = window.location.hash.substring(1);
@@ -44,12 +43,16 @@ class MainWidget extends React.Component{
 		this.updatePlaylistTitle = this.updatePlaylistTitle.bind(this);
 
 		const accessToken = getHashFragmentValue('access_token');
-		if(accessToken !== null) {
-			this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
-			this.state.signedIntoSpotify = true;
-		}
+		
 
 		fetch('/uri').then(response => response.json()).then(data => this.uri = data.uri);
+		fetch('/clientId').then(response => response.json()).then(data => {
+			this.clientId = data.clientId;
+			if(accessToken !== null) {
+				this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
+				this.state.signedIntoSpotify = true;
+			}
+		});
 	}
 
 	getFreshState() {
@@ -224,7 +227,7 @@ class MainWidget extends React.Component{
 	signIntoSpotify() {
 		sessionStorage.setItem('state', JSON.stringify(this.state))
 		const x = sessionStorage.getItem('state');
-		window.location.assign('https://accounts.spotify.com/authorize?client_id=0772a5231e724f94874272b38f9a6e21&redirect_uri=' + this.uri + '&scope=user-read-private%20playlist-modify-public%20user-read-email&response_type=token');
+		window.location.assign('https://accounts.spotify.com/authorize?client_id=' + this.clientId + '&redirect_uri=' + this.uri + '&scope=user-read-private%20playlist-modify-public%20user-read-email&response_type=token');
 	}
 
 	updateSelectedTrack(track) {

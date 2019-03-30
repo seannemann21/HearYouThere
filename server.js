@@ -2,14 +2,14 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 5000;
 const path = require('path');
-const client_id = '0772a5231e724f94874272b38f9a6e21';
+const client_id = process.env.CLIENT_ID;
 const client_secret = process.env.CLIENT_SECRET;
 
 // console.log that your server is up and running
 app.listen(port, () => console.log(`Listening on port ${port}`));
 
 
-// Thank you Ashish Nandan Singh for lines 12-25
+// Thank you Ashish Nandan Singh for lines 17-28
 // https://medium.freecodecamp.org/how-to-deploy-a-react-app-with-an-express-server-on-heroku-32244fe5a250
 
 app.use(express.static(path.join(__dirname, 'client/build')));
@@ -27,9 +27,13 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname+'/client/public/index.html'));
 })
 
-// create a GET route
 app.get('/uri', async (req, res) => {
   const data = {uri:process.env.REDIRECT_URI}
+  res.send(data);
+});
+
+app.get('/clientId', async (req, res) => {
+  const data = {clientId}
   res.send(data);
 });
 
