@@ -49,7 +49,7 @@ class MainWidget extends React.Component{
 		fetch('/clientId').then(response => response.json()).then(data => {
 			this.clientId = data.clientId;
 			if(accessToken !== null) {
-				this.playlistBuilder = new SpotifyPlaylistBuilder(clientId, accessToken);
+				this.playlistBuilder = new SpotifyPlaylistBuilder(this.clientId, accessToken);
 				this.state.signedIntoSpotify = true;
 			}
 		});
