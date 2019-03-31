@@ -44,13 +44,15 @@ class MainWidget extends React.Component{
 
 		const accessToken = getHashFragmentValue('access_token');
 		
+	}
 
+	componentDidMount() {
 		fetch('/uri').then(response => response.json()).then(data => this.uri = data.uri);
 		fetch('/clientId').then(response => response.json()).then(data => {
 			this.clientId = data.clientId;
 			if(accessToken !== null) {
 				this.playlistBuilder = new SpotifyPlaylistBuilder(this.clientId, accessToken);
-				this.state.signedIntoSpotify = true;
+				this.setState({signedIntoSpotify: true});
 			}
 		});
 	}
