@@ -29,7 +29,7 @@ class MainWidget extends React.Component{
 
 		const state = sessionStorage.getItem('state');
 		
-		if(state) {
+		if(state && state !== "null") {
 			try{
 				this.state = JSON.parse(state);
 			} catch(err) {
