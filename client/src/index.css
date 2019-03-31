@@ -36,16 +36,22 @@ code {
   display:none;
 }
 
+.page-container {
+  position:relative;
+  min-height:100vh;
+}
+
 .main-container {
   margin-right:auto;
   margin-left:auto;
-  margin-top:2em;
-  margin-bottom:3em;
+  padding-top:2em;
+  padding-bottom:4rem;
 }
 
 .festival-image {
 	max-height: 100%;
 	max-width: 100%;
+  min-width: 300px;
 }
 
 .btn {
@@ -56,8 +62,8 @@ code {
     list-style-type: none;
     padding:0;
     font-size:1.2rem;
-    width: 300px;
-    height:400px;
+    max-height:100%;
+    min-height: 400px;
     overflow-y: scroll;
 
 }
@@ -122,6 +128,7 @@ code {
   flex-wrap:wrap;
   justify-content: center;
   min-height:500px;
+  max-height:100%;
 }
 
 .full-height {
@@ -151,6 +158,7 @@ a:not([href]):not([tabindex]):hover
 .artist-container-element {
   margin:20px;
   max-width: 100%;
+  max-height: 100%;
 }
 
 .no-content-text {
@@ -172,7 +180,7 @@ a:not([href]):not([tabindex]):hover
 }
 
 .footer {
-  position: fixed;
+  position: absolute;
   left: 0;
   bottom: 0;
   width: 100%;
@@ -192,13 +200,13 @@ a:not([href]):not([tabindex]):hover
   color: white;  
 }
 
-
+/*
 @media only screen and (max-width: 1100px) {
   body {
     padding-bottom: 3rem;
   }
 }
-
+*/
 
 @media only screen and (max-width: 600px) {
     .footer {

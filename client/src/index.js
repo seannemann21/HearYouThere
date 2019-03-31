@@ -144,6 +144,8 @@ class MainWidget extends React.Component{
 		});
 	}
 
+	// taken from https://stackoverflow.com/questions/8667070/javascript-regular-expression-to-validate-url
+	// thanks ChristianDavid
 	validateUrl(value) {
   		return /^(?:(?:(?:https?|ftp):)?\/\/)(?:\S+(?::\S*)?@)?(?:(?!(?:10|127)(?:\.\d{1,3}){3})(?!(?:169\.254|192\.168)(?:\.\d{1,3}){2})(?!172\.(?:1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2})(?:[1-9]\d?|1\d\d|2[01]\d|22[0-3])(?:\.(?:1?\d{1,2}|2[0-4]\d|25[0-5])){2}(?:\.(?:[1-9]\d?|1\d\d|2[0-4]\d|25[0-4]))|(?:(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)(?:\.(?:[a-z\u00a1-\uffff0-9]-*)*[a-z\u00a1-\uffff0-9]+)*(?:\.(?:[a-z\u00a1-\uffff]{2,})))(?::\d{2,5})?(?:[/?#]\S*)?$/i.test(value);
 	}
@@ -261,6 +263,14 @@ class MainWidget extends React.Component{
 		return artistAdded;
 	}
 
+	getArtistListStyle() {
+		// want image height  to match artist list height, unless image is too small, then min height takes care of that
+		if(!this.imageHeight) {
+			this.imageHeight = document.getElementById('festival-image') ? document.getElementById('festival-image').clientHeight : null
+		}
+		return this.imageHeight ? {'height' : this.imageHeight} : {};
+	}
+
 	renderMainTitleView() {
 		return (
 			<div className="container-fluid">
@@ -279,13 +289,13 @@ class MainWidget extends React.Component{
 	renderArtistView() {
 		return (
 			<div className="container-fluid">
-				<div className="artist-container row">
+				<div id="artist-container" className="artist-container row">
 						<FestivalImage imageUrl={this.state.imageUrl}/>
 						<div className="col col-md-6">
 						{this.state.artists.length > 0 ? (
-							<EditableList placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={(e, artistId) => this.removeArtist(e, artistId)}/>
+							<EditableList listStyle={this.getArtistListStyle()} placeholder="Artist" addCallback={(artist) => this.addArtist(artist)} itemClick={this.doNothing} itemClass="shadow-sm artist-li" contentClass="" listClass="artist-list" items={this.state.artists.map(function(artist){return {key: artist.artistData.id, value: artist.artistData.name}})} remove={(e, artistId) => this.removeArtist(e, artistId)}/>
 						) : ('')}
-					</div>
+						</div>
 				</div>
 				<div className="row">
 					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={State.ARTIST_VIEW} requestPending={this.state.requestPending}
@@ -344,8 +354,8 @@ class MainWidget extends React.Component{
 class MainPage extends React.Component{
 	render() {
 		return(
-		<div>
-			<div className="main-container col col-lg-8 offset-lg-2">
+		<div className="page-container">
+			<div className="main-container col col-lg-10 offset-lg-1">
 				<MainWidget/>
 			</div>
 			<Footer/>

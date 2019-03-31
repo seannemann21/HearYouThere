@@ -32,7 +32,7 @@ export class EditableList extends React.Component{
 		return (
 			<>
 				{ this.props.items.length > 0 ?
-					<ul className={this.props.listClass}>{listItems}</ul> : ''
+					<ul style={this.props.listStyle} className={this.props.listClass}>{listItems}</ul> : ''
 				}
 			</>
 

@@ -65,6 +65,7 @@ app.get('/text', async (req, res) => {
 // takes a string of artists (e.g. Childish Gambino Rage Against the Machine) and parses the artists from it using Spotify API
 // this method needs to be cleaned up in the future
 app.get('/artists', async (req, res) => {
+
 	// swap '&' for 'and' and remove '.' charactes then split on spaces to get query terms
 	const line = req.query.line.replace(/&/g, 'and').replace(/\./g,'').split(' ');
 	const searcher = new SpotifySearcher(client_id, client_secret);
@@ -85,7 +86,7 @@ app.get('/artists', async (req, res) => {
       		// don't query if query is only the word 'the'
       		// query can not contain any special characters either
       		if(artistQuery.toUpperCase() !== 'THE' && artistQuery.match(/^[a-zA-Z0-9 .-]+$/)) {	
-		      	console.log(artistQuery);
+		      	//console.log(artistQuery);
 		      	try{
 		      		// query Spotify for results
 			    	response = await searcher.searchArtist(encodeURI(artistQuery));
@@ -122,7 +123,7 @@ app.get('/artists', async (req, res) => {
       	// return results
       	res.send(lineValidatedArtists);
       } catch(e) {
-      	console.log(e);
+      	//console.log(e);
       }
 
 });
@@ -145,7 +146,7 @@ app.get('/artist', async (req, res) => {
 		  res.send(validatedArtist);
       }
  	} catch (error) {
- 	  console.log(error);
+ 	  //console.log(error);
 	  res.send(error);
   }
 });
@@ -213,7 +214,6 @@ async function fetchTextFromImage(imageUrl) {
 
   // Performs label detection on the image file
   const [result] = await client.documentTextDetection(imageUrl);
-  console.log(result);
   return result;
 }
 
@@ -232,7 +232,8 @@ class SpotifySearcher {
 		var config = {
   			headers: {'Authorization': 'Basic ' + base64EncodedCredentials}
 		};	
-
+		console.log('client: ' + this.clientId);
+		console.log('client secret: ' + this.clientSecret);
 		const response = await this.axios.post('https://accounts.spotify.com/api/token', this.querystring.stringify({ grant_type: 'client_credentials' }), config);
 		this.accessToken = response.data.access_token;
 	}
