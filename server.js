@@ -33,7 +33,7 @@ app.get('/uri', async (req, res) => {
 });
 
 app.get('/clientId', async (req, res) => {
-  const data = {client_id}
+  const data = {clientId: client_id}
   res.send(data);
 });
 
