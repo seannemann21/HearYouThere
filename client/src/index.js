@@ -223,6 +223,7 @@ class MainWidget extends React.Component{
 	}
 
 	async clearPlaylist() {
+		sessionStorage.setItem('state', null);
 		this.setState(this.getFreshState());
 	}
 
