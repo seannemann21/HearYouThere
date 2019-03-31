@@ -41,12 +41,11 @@ class MainWidget extends React.Component{
 		this.updateSelectedTrack = this.updateSelectedTrack.bind(this);
 		this.updateImage = this.updateImage.bind(this);
 		this.updatePlaylistTitle = this.updatePlaylistTitle.bind(this);
-
-		const accessToken = getHashFragmentValue('access_token');
 		
 	}
 
 	componentDidMount() {
+		const accessToken = getHashFragmentValue('access_token');
 		fetch('/uri').then(response => response.json()).then(data => this.uri = data.uri);
 		fetch('/clientId').then(response => response.json()).then(data => {
 			this.clientId = data.clientId;
