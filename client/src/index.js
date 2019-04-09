@@ -12,6 +12,7 @@ import  Button from 'react-bootstrap/Button';
 import  Modal from 'react-bootstrap/Modal';
 import { Player } from 'video-react';
 import video from './hear-you-there-demo.mp4'
+import 'video-react/dist/video-react.css';
 
 function getHashFragmentValue(key) {
 	var hash = window.location.hash.substring(1);
