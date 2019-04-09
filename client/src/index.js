@@ -8,6 +8,10 @@ import { EditableList } from './EditableList.js';
 import { ButtonContainer } from './ButtonContainer.js';
 import { MainTitle } from './MainTitle.js';
 import { State } from './State.js';
+import  Button from 'react-bootstrap/Button';
+import  Modal from 'react-bootstrap/Modal';
+import { Player } from 'video-react';
+import video from './hear-you-there-demo.mp4'
 
 function getHashFragmentValue(key) {
 	var hash = window.location.hash.substring(1);
@@ -20,6 +24,28 @@ function getHashFragmentValue(key) {
 	}
 
 	return null;
+}
+
+class TutorialModal extends React.Component {
+	render() {
+		// brought in react-bootstrap for modal
+		// below taken from https://react-bootstrap.github.io/components/modal/
+		return (
+			<Modal show={this.props.show} onHide={() => this.props.onHide()}>
+          		<Modal.Header closeButton>
+            		<Modal.Title>Modal heading</Modal.Title>
+          		</Modal.Header>
+          		<Modal.Body>
+  					<Player	playsInline	style={{"maxHeight" : "240px", "maxWidth" : "320px"}} src={video}/>
+            	</Modal.Body>
+          		<Modal.Footer>
+            		<Button variant="secondary" onClick={() => this.props.onHide()}>
+              			Close
+            		</Button>
+          		</Modal.Footer>
+        	</Modal>
+		);
+	}
 }
 
 class MainWidget extends React.Component{
@@ -65,7 +91,8 @@ class MainWidget extends React.Component{
 				  requestPending: false,
 				  playlistTitle:"",
 				  invalidUrl: false,
-				  signedIntoSpotify: signedIntoSpotify
+				  signedIntoSpotify: signedIntoSpotify,
+				  showDemo: false
 				};
 	}
 
@@ -259,7 +286,7 @@ class MainWidget extends React.Component{
 			artists.push(artist);
 			this.setState({artists: artists});
 			artistAdded = true;
-			alert(validatedArtist.name + " added to artists")
+			alert(validatedArtist.name + " added to artists");
 		}
 
 		return artistAdded;
@@ -273,6 +300,14 @@ class MainWidget extends React.Component{
 		return this.imageHeight ? {'height' : this.imageHeight} : {};
 	}
 
+	showModal() {
+		this.setState({showDemo: true});
+	}
+
+	hideModal() {
+		this.setState({showDemo: false});
+	}
+
 	renderMainTitleView() {
 		return (
 			<div className="container-fluid">
@@ -282,8 +317,9 @@ class MainWidget extends React.Component{
 				<div className="row">
 					<ButtonContainer inputPlaceholder="Image URL" inputText={this.state.imageUrl} inputChange={this.updateImage} viewState={State.TITLE_VIEW} requestPending={this.state.requestPending}
 					artists={this.state.artists} generatePlaylist={() => this.generatePlaylist()} exportPlaylist={() => this.exportPlaylist()} signIntoSpotify={() => this.signIntoSpotify()} signedIntoSpotify={this.state.signedIntoSpotify}
-					clearPlaylist={() => this.clearPlaylist}/>
+					clearPlaylist={() => this.clearPlaylist} showModal={() => this.showModal()}/>
 				</div>
+				<TutorialModal show={this.state.showDemo} onHide={() => this.hideModal()}/>
 			</div>
 			);
 	}

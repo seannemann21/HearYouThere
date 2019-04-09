@@ -10,7 +10,12 @@ export class ButtonContainer extends React.Component {
 						<input disabled={this.props.requestPending && this.props.viewState !== State.PLAYLIST_VIEW} placeholder={this.props.inputPlaceholder} className="image-input col-10 offset-1 col-md-8 offset-md-2" type="text" value={this.props.inputText} onChange={this.props.inputChange}/>
 					</div>
 					<div className="row btn-row">
-						{this.props.viewState === State.TITLE_VIEW || this.props.viewState === State.ARTIST_VIEW ?
+
+						{this.props.viewState === State.TITLE_VIEW ?
+							<button className="btn btn-primary" onClick={() => this.props.showModal()}>View Demo</button>
+							: ''
+						}
+						{this.props.viewState === State.ARTIST_VIEW ?
 							<button className="btn btn-primary" disabled={this.props.requestPending || this.props.artists.length === 0} onClick={() => this.props.generatePlaylist()}>Generate Playlist</button>
 							: ''
 						}
@@ -25,6 +30,7 @@ export class ButtonContainer extends React.Component {
 							<a className="btn btn-primary" onClick={() => this.props.signIntoSpotify()}>Spotify Login</a>
 						  : ''
 						}
+						
 						{this.props.invalidUrl ? <div>invalidUrl</div> : ""}
 					</div>
 			</div>

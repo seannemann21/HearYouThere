@@ -24,6 +24,10 @@ code {
     font-size: 4em;
 }
 
+player {
+  max-width: 100%;
+}
+
 .btn-row {
   justify-content: center;
 }
